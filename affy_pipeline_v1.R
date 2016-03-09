@@ -21,9 +21,9 @@ noGroup=F
 #arrayType="human"
 arrayType="mouse"
 
-#filtering parameter:ra
-global_nsamples=4
-group_nsamples=3
+#filtering parameter: 
+global_nsamples=4 #after normalisation to generate graphs
+
 
 #read info and cel files
 cat("Reading info file\n")
