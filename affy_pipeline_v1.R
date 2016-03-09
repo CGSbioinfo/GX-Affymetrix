@@ -2,6 +2,7 @@
 require(oligo)
 require(limma)
 require(pd.hugene.2.1.st)
+require(pd.mogene.2.1.st)
 require(genefilter)
 require(ggplot2)
 require(reshape)
@@ -17,15 +18,16 @@ require(scatterplot3d)
 noGroup=F
 
 #select array type:
-arrayType="human"
+#arrayType="human"
+arrayType="mouse"
 
-#filtering parameter:
+#filtering parameter:ra
 global_nsamples=4
 group_nsamples=3
 
 #read info and cel files
 cat("Reading info file\n")
-info<-read.table("sample_info.txt", sep="\t",header=T) #should have columns (Sample.Name, Sample.Group)
+info<-read.table("sample_info2.txt", sep="\t",header=T) #should have columns (Sample.Name, Sample.Group)
 cat("Info file loaded\n")
 
 
@@ -193,7 +195,7 @@ if(!noGroup){
     dev.off()
     
     pdf(file=paste("raw_data_plots/MDS_",group[i],"_raw_data.pdf",sep=""),width = 10, height=5)
-    fit_mds_raw<-cmdscale(dist(t(exprs(raw.data[,selectedSamples]))),eig = T, k=3)
+    fit_mds_raw<-cmdscale(dist(t(exprs(raw.data[,selectedSamples]))),eig = T, k=2)
     pca1_raw<-fit_mds_raw$points[,1]
     pca2_raw<-fit_mds_raw$points[,2]
     par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
@@ -516,14 +518,14 @@ for(i in 1:length(group)){
         }
         pdf(file=paste("results/graphs/MDS_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
         par(xpd = T)
-        fit_mds_rma<-cmdscale(dist(t(exprs(selected_rma_data))),eig = T, k=2)
+        fit_mds_rma<-cmdscale(dist(t(exprs(rma.data.core.s))),eig = T, k=2)
         mds1<-fit_mds_rma$points[,1]
         mds2<-fit_mds_rma$points[,2]
         plot(mds1, mds2, main="MDS plot", xlab="MDS 1", ylab="MDS 2", col=rainbow_hcl(length(current_samples$Sample.Name)), pch=16)
         legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=rainbow_hcl(length(current_samples$Sample.Name)), cex=0.7, inset(0,-0.1))
         dev.off()
         pdf(file=paste("results/graphs/Hierarchical_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
-        plot(hclust(dist(t(exprs(selected_rma_data)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
+        plot(hclust(dist(t(exprs(rma.data.core.s)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
         dev.off()
       }
       
