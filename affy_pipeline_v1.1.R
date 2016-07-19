@@ -19,17 +19,17 @@ noGroup=F
 
 #select array type:
 #arrayType="human"
-arrayType="mouse"
+arrayType="human"
 
-#filtering parameter: 
-global_nsamples=4 #after normalisation to generate graphs
-
+#filtering parameter:ra
+global_nsamples=4
+group_nsamples=3
 
 #read info and cel files
 cat("Reading info file\n")
 info<-read.table("sample_info2.txt", sep="\t",header=T) #should have columns (Sample.Name, Sample.Group)
 cat("Info file loaded\n")
-
+groups_to_compare<-read.table("comparisons_file.txt", header=T, sep="\t")
 
 ########################################
 ###########loading the data#############
@@ -43,8 +43,10 @@ cat("Data loaded\n")
 ##########Process sample names################
 
 sampleNames(raw.data)<- gsub(sampleNames(raw.data), pattern = ".CEL",replacement = "")
+sampleNames(raw.data)<- gsub(sampleNames(raw.data), pattern = "-",replacement = "_")
+sampleNames(raw.data)<- gsub(sampleNames(raw.data), pattern = " ",replacement = "_")
 index_sample<-match(info$Sample.Name,sampleNames(raw.data) )
-
+row.names(info)<-info$Sample.Name
 
 ##########Selected sample present in the info file ######
 
@@ -72,7 +74,7 @@ dir.create("results/tables", showWarnings = F,recursive = T)
 cat("Starting plotting raw data\n")
 cat("Ploting boxplot\n")
 pdf(file="raw_data_plots/boxplot_raw_groups.pdf",width=10,height=5)
-boxplot(raw.data, col=info$Sample.Group,las=2)
+boxplot(raw.data, col=rainbow_hcl(length(info$Sample.Group)),las=2,which="all")
 dev.off()
 
 
@@ -89,23 +91,70 @@ fit_mds_raw<-cmdscale(dist(t(exprs(raw.data))),eig = T, k=3)
 pca1_raw<-fit_mds_raw$points[,1]
 pca2_raw<-fit_mds_raw$points[,2]
 par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
-plot(pca1_raw,pca2_raw,type="n")
-if(!noGroup){
-  text(pca1_raw,pca2_raw,labels=sampleNames(raw.data),cex=0.7,col=as.numeric(info$Sample.Group))
-  legend(legend=levels(info$Sample.Group),fill=c(1:length(levels(info$Sample.Group))), "topright",inset=c(-0.2,0))
+if(length(levels(info$Sample.Group))>6){
+  npalette= ceiling(length(levels(info$Sample.Group))/6)
+  first=TRUE
+  for(i in 1:npalette){
+    l=10+20*i
+    c=50+30*i
+    s=5+15*i
+    rain=rainbow_hcl(6, l=l,c=c,s=s)
+    if(first){
+      total_rain=rain
+      first=FALSE
+    }else{
+      total_rain=c(total_rain,rain)
+    }
+  }
+  palette(total_rain)
+}else{
+  palette(rainbow(length(levels(info$Sample.Group))))
 }
+plot(pca1_raw,pca2_raw,pch=16,col=as.numeric(info[names(pca1_raw),]$Sample.Group))
+#text(pca1_rma,pca2_rma,labels=sampleNames(rma.data.core),cex=0.7,col=as.numeric(info$Sample.Group))
+legend(legend=levels(info$Sample.Group),fill=sort(unique(as.numeric(info$Sample.Group))), "topright",inset=c(-0.3,0))
+
+#plot(pca1_raw,pca2_raw,pch=16,col=rainbow_hcl(length(info$Sample.Group)))
+#if(!noGroup){
+#  text(pca1_raw,pca2_raw,labels=sampleNames(raw.data),cex=0.7,col=rainbow_hcl(length(info$Sample.Group)))
+ # legend(legend=levels(info$Sample.Group),fill=rainbow_hcl(length(levels(info$Sample.Group))), "topright",inset=c(-0.2,0))
+#}
 dev.off()
 
 
 ############### 3D plots ###########
 
 cat("Plotting 3D MDS\n")
+
+#palette(rainbow_hcl(length(levels(info$Sample.Group))))
+if(length(levels(info$Sample.Group))>6){
+  npalette= ceiling(length(levels(info$Sample.Group))/6)
+  first=TRUE
+  for(i in 1:npalette){
+    l=10+20*i
+    c=50+30*i
+    s=5+15*i
+    rain=rainbow_hcl(6, l=l,c=c,s=s)
+    if(first){
+      total_rain=rain
+      first=FALSE
+    }else{
+      total_rain=c(total_rain,rain)
+    }
+  }
+  palette(total_rain)
+}else{
+  palette(rainbow_hcl(length(levels(info$Sample.Group))))
+}
+
 pdf(file="raw_data_plots/MDS_clustering_raw_data_3D.pdf",width=10, height=5)
-scatterplot3d(fit_mds_raw$points[,c(1:3)], xlab="PCA1",ylab="PCA2", zlab="PCA3", color=as.numeric(info$Sample.Group),pch=19, type="h" )
+par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
+scatterplot3d(fit_mds_raw$points[,c(1:3)], xlab="MDS1",ylab="MDS2", zlab="MDS3", color=as.numeric(info[rownames(fit_mds_raw$points),]$Sample.Group),pch=19, type="h",mar=c(7.1,4.1,4.1,10.1))
 #alternative (interactive): plot3d(fit_mds_raw$points[,c(1:3)], col=as.numeric(info$Sample.Group), siz=1, type="s", xlab="PCA1", ylab="PCA2", zlab="PCA3")
 #scatterplot3d(pca$rotation[,c(1:3)], xlab="PCA1",ylab="PCA2", zlab="PCA3", color=as.numeric(info$Sample.Group),pch=19, type="h" )
-legend("topleft", title="Groups", levels(as.factor(info$Sample.Group)), fill=levels(as.factor(as.numeric(info$Sample.Group))))
+legend("topleft", title="Groups", levels(as.factor(info$Sample.Group)), fill=levels(as.factor(as.numeric(info$Sample.Group))),inset=c(0.99,-0.1))
 dev.off()
+
 
 ############# coloured dendogram #######
 
@@ -146,12 +195,12 @@ for(i in 1:length(sampleNames(raw.data))){
       dev.off()
     }
     graph_n=current_n
-    jpeg(file=paste("raw_data_plots/GCContent_",graph_n,"_raw_data.jpg",sep=""),width = 480, height=480)
+    png(file=paste("raw_data_plots/GCContent_",graph_n,"_raw_data.jpg",sep=""),width = 480, height=480)
     par(mfrow=c(2,2))
     plot(y=pmsLog2[,i], x=GCcontent, main=paste("GC content ",sampleNames(raw.data)[i]), xlab="GC frequency", ylab="Intensity" )
   } 
 }
-dev.off()
+graphics.off()
 
 
 ########### Plot density plot ####################
@@ -159,7 +208,7 @@ dev.off()
 cat("Plot density plot\n")
 pdf(file="raw_data_plots/density_plot_raw_data.pdf",width=10, height=5)
 par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
-hist(raw.data, col=1:length(levels(info$Sample.Group)))
+hist(raw.data, col=1:length(levels(info$Sample.Group)),which="all")
 legend(legend=levels(info$Sample.Group),fill=c(1:length(levels(info$Sample.Group))), "topright",inset=c(-0.2,0))
 dev.off()
 par(mar=c(5.1,4.1,4.1,2.1),xpd=F)
@@ -177,7 +226,7 @@ for(i in 1:length(sampleNames(raw.data))){
       dev.off()
     }
     graph_n=current_n
-    jpeg(file=paste("raw_data_plots/MAplot_",graph_n,"_raw_data.jpg",sep=""),width = 800, height=500)
+    png(file=paste("raw_data_plots/MAplot_",graph_n,"_raw_data.jpg",sep=""),width = 800, height=500)
     par(mfrow=c(2,2))
     MAplot(raw.data, which=i)
   } 
@@ -189,18 +238,22 @@ cat("Plot group HC and MDS\n")
 if(!noGroup){
   for(i in 1:length(group)){
     selectedSamples<-info[info$Sample.Group==as.character(group[i]),]$Sample.Name
-    pdf(file=paste("raw_data_plots/Hist_",group[i],"_raw_data.pdf",sep=""),width = 10, height=5)
-    hist(raw.data[,selectedSamples],main=group[i],col=1:length(selectedSamples), lty=1:length(selectedSamples))
-    legend("topright", legend=selectedSamples, col=1:length(selectedSamples),lty=1:length(selectedSamples))
-    dev.off()
-    
-    pdf(file=paste("raw_data_plots/MDS_",group[i],"_raw_data.pdf",sep=""),width = 10, height=5)
-    fit_mds_raw<-cmdscale(dist(t(exprs(raw.data[,selectedSamples]))),eig = T, k=2)
-    pca1_raw<-fit_mds_raw$points[,1]
-    pca2_raw<-fit_mds_raw$points[,2]
-    par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
-    plot(pca1_raw,pca2_raw,type="n")
-    dev.off()
+    if(length(selectedSamples)>2){
+      pdf(file=paste("raw_data_plots/Hist_",group[i],"_raw_data.pdf",sep=""),width = 10, height=5)
+      plot(hclust(dist(t(exprs(raw.data[,selectedSamples])))))
+      #hist(raw.data[,selectedSamples],main=group[i],col=1:length(selectedSamples), lty=1:length(selectedSamples),which="all")
+      #legend("topright", legend=selectedSamples, col=1:length(selectedSamples),lty=1:length(selectedSamples))
+      dev.off()
+      
+      pdf(file=paste("raw_data_plots/MDS_",group[i],"_raw_data.pdf",sep=""),width = 10, height=5)
+      fit_mds_raw<-cmdscale(dist(t(exprs(raw.data[,selectedSamples]))),eig = T, k=2)
+      pca1_raw<-fit_mds_raw$points[,1]
+      pca2_raw<-fit_mds_raw$points[,2]
+      par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
+      plot(pca1_raw,pca2_raw, col=rainbow_hcl(length(selectedSamples)),type="o")
+      legend("topright", legend=selectedSamples, col=1:length(selectedSamples),lty=1:length(selectedSamples))
+      dev.off()
+    }
   }
 }
 
@@ -247,15 +300,17 @@ for(i in 1:ngroup){
 
   pdf(file=paste("rma_plots/MDS_clustering_rma_data_",current_group,".pdf",sep=""),width=10, height=5)
   par(xpd = T)
-  fit_mds_rma<-cmdscale(dist(t(exprs(selected_rma_data))),eig = T, k=2)
-  mds1<-fit_mds_rma$points[,1]
-  mds2<-fit_mds_rma$points[,2]
-  plot(mds1, mds2, main="MDS plot", xlab="MDS 1", ylab="MDS 2", col=rainbow_hcl(length(current_samples$Sample.Name)), pch=16)
-  legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=rainbow_hcl(length(current_samples$Sample.Name)), cex=0.7, inset(0,-0.1))
-  dev.off()
-  pdf(file=paste("rma_plots/Hierarchical_clustering_rma_data_",current_group,".pdf",sep=""),width=10, height=5)
-  plot(hclust(dist(t(exprs(selected_rma_data)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
-  dev.off()
+  if(length(sampleNames(selected_rma_data))>2){
+    fit_mds_rma<-cmdscale(dist(t(exprs(selected_rma_data))),eig = T, k=2)
+    mds1<-fit_mds_rma$points[,1]
+    mds2<-fit_mds_rma$points[,2]
+    plot(mds1, mds2, main="MDS plot", xlab="MDS 1", ylab="MDS 2", col=rainbow_hcl(length(current_samples$Sample.Name)), pch=16)
+    legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=rainbow_hcl(length(current_samples$Sample.Name)), cex=0.7, inset(0,-0.1))
+    dev.off()
+    pdf(file=paste("rma_plots/Hierarchical_clustering_rma_data_",current_group,".pdf",sep=""),width=10, height=5)
+    plot(hclust(dist(t(exprs(selected_rma_data)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
+    dev.off()
+  }
  
 } 
 
@@ -394,7 +449,7 @@ write.table(file="Control_ranking_table.txt", rank_table, sep="\t", row.names = 
 #################### plot after normalisation #########
 cat("Boxplot after normalisation\n")
 pdf(file="rma_plots/boxplot_rma_core.pdf",width=10,height=5)
-boxplot(rma.data.core, col=info$Sample.Group,las=2)
+boxplot(rma.data.core, col=rainbow_hcl(length(info$Sample.Group)),las=2,which="all")
 dev.off()
 
 cat("HC after normalisation\n")
@@ -408,9 +463,28 @@ fit_mds_rma<-cmdscale(dist(t(exprs(rma.data.core))),eig = T, k=2)
 pca1_rma<-fit_mds_rma$points[,1]
 pca2_rma<-fit_mds_rma$points[,2]
 par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
-plot(pca1_rma,pca2_rma,type="n")
-text(pca1_rma,pca2_rma,labels=sampleNames(rma.data.core),cex=0.7,col=as.numeric(info$Sample.Group))
-legend(legend=levels(info$Sample.Group),fill=c(1:length(levels(info$Sample.Group))), "topright",inset=c(-0.2,0))
+if(length(levels(info$Sample.Group))>6){
+  npalette= ceiling(length(levels(info$Sample.Group))/6)
+  first=TRUE
+  for(i in 1:npalette){
+    l=10+15*i
+    c=50+30*i
+    s=5+15*i
+    rain=rainbow_hcl(6, l=l,c=c,s=s)
+    if(first){
+      total_rain=rain
+      first=FALSE
+    }else{
+      total_rain=c(total_rain,rain)
+    }
+  }
+  palette(total_rain)
+}else{
+  palette(rainbow_hcl(length(levels(info$Sample.Group))))
+}
+plot(pca1_rma,pca2_rma,pch=16,col=as.numeric(info[names(pca1_rma),]$Sample.Group))
+#text(pca1_rma,pca2_rma,labels=sampleNames(rma.data.core),cex=0.7,col=as.numeric(info$Sample.Group))
+legend(legend=levels(info$Sample.Group),fill=sort(unique(as.numeric(info$Sample.Group))), "topright",inset=c(-0.3,0))
 dev.off()
 par(mar=c(5.1,4.1,4.1,2.1),xpd=F)
 
@@ -434,7 +508,7 @@ for(i in 1:length(sampleNames(rma.data.core))){
       dev.off()
     }
     graph_n=current_n
-    jpeg(file=paste("rma_plots/MAplot_",graph_n,"_rma_data.jpg",sep=""),width = 480, height=480)
+    png(file=paste("rma_plots/MAplot_",graph_n,"_rma_data.jpg",sep=""),width = 480, height=480)
     par(mfrow=c(2,2))
     MAplot(rma.data.core, which=i)
   } 
@@ -444,9 +518,31 @@ dev.off()
 #############3D MDS #####################
 cat("3D MDS after normalisation\n")
 fit_mds_rma<-cmdscale(dist(t(exprs(rma.data.core))),eig = T, k=3)
+
+if(length(levels(info$ample.Group))>6){
+  npalette= ceiling(length(levels(info$Sample.Group))/6)
+  first=TRUE
+  for(i in 1:npalette){
+    l=10+20*i
+    c=100+20*i
+    s=10+20*i
+    rain=rainbow_hcl(6, l=l,c=c,s=s)
+    if(first){
+      total_rain=rain
+      first=FALSE
+    }else{
+      total_rain=c(total_rain,rain)
+    }
+  }
+  palette(total_rain)
+}else{
+  palette(rainbow_hcl(length(levels(info$Sample.Group))))
+}
+par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
+#scatterplot3d(fit_mds_raw$points[,c(1:3)], xlab="PCA1",ylab="PCA2", zlab="PCA3", color=as.numeric(info$Sample.Group),pch=19, type="h",mar=c(7.1,4.1,4.1,7.1))
 pdf(file="rma_plots/MDS_clustering_norm_data_3D.pdf",width=10, height=5)
-scatterplot3d(fit_mds_rma$points[,c(1:3)], xlab="MDS1",ylab="MDS2", zlab="MDS3", color=as.numeric(info$Sample.Group),pch=19, type="h" )
-legend("topleft", title="Groups", levels(as.factor(info$Sample.Group)), fill=levels(as.factor(as.numeric(info$Sample.Group))))
+scatterplot3d(fit_mds_rma$points[,c(1:3)], xlab="MDS1",ylab="MDS2", zlab="MDS3", color=as.numeric(info[rownames(fit_mds_rma$point),]$Sample.Group),pch=19, type="h",mar=c(7.1,4.1,4.1,7.1))
+legend("topleft", title="Groups", levels(as.factor(info$Sample.Group)), fill=levels(as.factor(as.numeric(info$Sample.Group))), inset=c(1,0))
 dev.off()
 
 #alternative (interactive): plot3d(fit_mds_raw$points[,c(1:3)], col=as.numeric(info$Sample.Group), siz=1, type="s", xlab="PCA1", ylab="PCA2", zlab="PCA3")
@@ -473,95 +569,91 @@ cat("Performing comparisons\n")
 summary_sig<-data.frame(Comparisons=character(), Significant_0.05=integer(),Significant_0.01=integer(),stringsAsFactors = F)
 n_comp=0
 first_comp=TRUE
-for(i in 1:length(group)){
-  for( l in i+1:(length(group)-1)){
-    if(l<=length(group)){
-      n_comp=n_comp+1
-      group1=group[i]    
-      group2=group[l]
-      cat(paste0("Comparing groups: ",group[i]," v ",group[l],"\n"))
-      index1<-row.names(info[info$Sample.Group==group1,])
-      index2<-row.names(info[info$Sample.Group==group2,])
-      index_all<-c(index1,index2)
-      selected_samples<-(info[index_all,])
-      selected_samples<-droplevels(selected_samples)
-      raw.data.s<-raw.data[,as.numeric(index_all)]
-      rma.data.core.s<-rma(raw.data.s, target="core")
-      rma.data.core.s<-rma.data.core.s[,as.character(selected_samples$Sample.Name)]
-      median_exprs<-median(exprs(rma.data.core.s))
-      
-      ####Filter expression levels#
-      
-      filter_setting<-kOverA(length(sampleNames(rma.data.core.s))/2,median_exprs)
-      filter_function<-filterfun(filter_setting)
-      probe_filter<-genefilter(exprs(rma.data.core.s),filter_function)
-      rma.data.core.s<-rma.data.core.s[probe_filter,]
-      data.annot<-getNetAffx(rma.data.core.s, type="transcript")
-      fData(rma.data.core.s)<-pData(data.annot)
-      rma.data.core.s<-rma.data.core.s[fData(rma.data.core.s)$category=="main",]
-      design<-model.matrix(~0+selected_samples$Sample.Group)
-      colnames(design)<-gsub(colnames(design), pattern = "selected_samples.Sample.Group",replacement = "")
-      
-      #### generate graphs during analysis ###
-      for (k in 1:2){
-        group_selected<-group[k]
-        current_samples<-info[info$Sample.Group==current_group,]
-        color_selected<-rainbow_hcl(length(current_samples$Sample.Name))
-        if(dim(selected_rma_data)[2]>3){
-          pdf(file=paste("results/graphs/MDS_clustering_rma_data_3D_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
-          par(xpd = T)
-          fit_mds_rma<-cmdscale(dist(t(exprs(selected_rma_data))),eig = T, k=3)
-          write.table(fit_mds_rma$points,file=paste("rma_plots/MDS_clustering_rma_data_table_",group1,"_v_",group2,".txt",sep=""), sep="\t" )
-          scatterplot3d(fit_mds_rma$points[,c(1:3)], xlab="MDS1",ylab="MDS2", zlab="MDS3",pch=19, type="h",color=color_selected[1:length(current_samples$Sample.Name)])
-          legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=color_selected, cex = 0.7, inset=c(-0.05,-0.1))
-          dev.off()
-        }
-        pdf(file=paste("results/graphs/MDS_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
-        par(xpd = T)
-        fit_mds_rma<-cmdscale(dist(t(exprs(rma.data.core.s))),eig = T, k=2)
-        mds1<-fit_mds_rma$points[,1]
-        mds2<-fit_mds_rma$points[,2]
-        plot(mds1, mds2, main="MDS plot", xlab="MDS 1", ylab="MDS 2", col=rainbow_hcl(length(current_samples$Sample.Name)), pch=16)
-        legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=rainbow_hcl(length(current_samples$Sample.Name)), cex=0.7, inset(0,-0.1))
-        dev.off()
-        pdf(file=paste("results/graphs/Hierarchical_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
-        plot(hclust(dist(t(exprs(rma.data.core.s)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
-        dev.off()
-      }
-      
-      
-      
-      fit<-lmFit(exprs(rma.data.core.s),design)
-      contrast.matrix=makeContrasts(paste(as.character(group2),as.character(group1),sep="-"),levels=design)
-      fit.contrast<-contrasts.fit(fit, contrast.matrix)
-      fit.ebayes<-eBayes(fit.contrast)
-      results.table<-topTable(fit.ebayes,number=dim(exprs(rma.data.core.s))[1],adjust.method="BH")
-      results.ids<-row.names(results.table)
-      results<-cbind(fData(rma.data.core.s[results.ids,]),results.table,exprs(rma.data.core.s)[results.ids,])
-      write.table(results, file=paste("results/tables/results_",group1,"_vs_",group2,".csv",sep=""), sep=",", row.names = F)
-      logFC<-results.table$logFC
-      log_adj.pvalue=-log(results.table$adj.P.Val,base = 10)
-      significant<-results.table$adj.P.Val<0.05
-          
-      n_sig_0.05<-dim(results[results.table$adj.P.Val<0.05,])[1]
-      n_sig_0.01<-dim(results[results.table$adj.P.val<0.01,])[1]
-      comp<-paste(group1,"_vs_",group2,sep="")
-      cat(paste0(n_comp," ",comp, " ",n_sig_0.05," ",n_sig_0.01,"\n"))
-      if (first_comp){
-        summary_sig[n_comp,]<-c(comp,n_sig_0.05,n_sig_0.01)
-        first_comp=FALSE
-      }else{
-        summary_sig<-rbind(summary_sig, c(comp, n_sig_0.05, n_sig_0.01))
-      }
-      print(summary_sig)
-          
-      volcano<-as.data.frame(cbind(logFC,log_adj.pvalue))
-      g<-ggplot(volcano, aes(logFC,log_adj.pvalue,col=significant))+geom_point()+ggtitle(paste("Volcano_",group1,"_vs_",group2,sep=""))+ylab("significance level (-log(adj.pval))")
-      pdf(file=paste("results/graphs/Volcano_",group1,"_vs_",group2,".pdf",sep=""),width = 10, height=5)
-      print(g)
+for(i in 1:length(row.names(groups_to_compare))){
+  n_comp = n_comp+1
+  group1=groups_to_compare[i,1]
+  group2=groups_to_compare[i,2]
+  cat(paste0("Comparing groups: ",group1," v ",group2,"\n"))
+  index1<-row.names(info[info$Sample.Group%in%group1,])
+  index2<-row.names(info[info$Sample.Group%in%group2,])
+  index_all<-c(index1,index2)
+  selected_samples<-(info[index_all,])
+  selected_samples<-droplevels(selected_samples)
+  raw.data.s<-raw.data[,index_all]
+  rma.data.core.s<-rma(raw.data.s, target="core")
+  rma.data.core.s<-rma.data.core.s[,as.character(selected_samples$Sample.Name)]
+  median_exprs<-median(exprs(rma.data.core.s))
+  
+  ####Filter expression levels#
+  
+  filter_setting<-kOverA(length(sampleNames(rma.data.core.s))/2,median_exprs)
+  filter_function<-filterfun(filter_setting)
+  probe_filter<-genefilter(exprs(rma.data.core.s),filter_function)
+  rma.data.core.s<-rma.data.core.s[probe_filter,]
+  data.annot<-getNetAffx(rma.data.core.s, type="transcript")
+  fData(rma.data.core.s)<-pData(data.annot)
+  rma.data.core.s<-rma.data.core.s[fData(rma.data.core.s)$category=="main",]
+  design<-model.matrix(~0+selected_samples$Sample.Group)
+  colnames(design)<-gsub(colnames(design), pattern = "selected_samples.Sample.Group",replacement = "")
+  
+  #### generate graphs during analysis ###
+  for (k in 1:2){
+    group_selected<-group[k]
+    current_samples<-info[info$Sample.Group==current_group,]
+    color_selected<-rainbow_hcl(length(current_samples$Sample.Name))
+    if(dim(selected_rma_data)[2]>3){
+      pdf(file=paste("results/graphs/MDS_clustering_rma_data_3D_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
+      par(xpd = T)
+      fit_mds_rma<-cmdscale(dist(t(exprs(selected_rma_data))),eig = T, k=3)
+      write.table(fit_mds_rma$points,file=paste("rma_plots/MDS_clustering_rma_data_table_",group1,"_v_",group2,".txt",sep=""), sep="\t" )
+      scatterplot3d(fit_mds_rma$points[,c(1:3)], xlab="MDS1",ylab="MDS2", zlab="MDS3",pch=19, type="h",color=color_selected[1:length(current_samples$Sample.Name)])
+      legend("topleft", title="Samples", legend = current_samples$Sample.Name, fill=color_selected, cex = 0.7, inset=c(-0.05,-0.1))
       dev.off()
     }
+    pdf(file=paste("results/graphs/MDS_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
+    par(mar=c(5.1,4.1,4.1,12.1),xpd=T)
+    fit_mds_rma<-cmdscale(dist(t(exprs(rma.data.core.s))),eig = T, k=2)
+    mds1<-fit_mds_rma$points[,1]
+    mds2<-fit_mds_rma$points[,2]
+    plot(mds1, mds2, main="MDS plot", xlab="MDS 1", ylab="MDS 2", col=rainbow_hcl(length(selected_samples$Sample.Name)), pch=16)
+    legend("topleft", title="Samples", legend = selected_samples$Sample.Name, fill=rainbow_hcl(length(selected_samples$Sample.Name)), cex=0.7, inset(0,-0.1))
+    dev.off()
+    pdf(file=paste("results/graphs/Hierarchical_clustering_rma_data_",group1,"_v_",group2,"_comp",".pdf",sep=""),width=10, height=5)
+    plot(hclust(dist(t(exprs(rma.data.core.s)))),xlab="Distance based on expression",main="Hierarchical clustering normalised data")
+    dev.off()
   }
+  
+  
+  
+  fit<-lmFit(exprs(rma.data.core.s),design)
+  contrast.matrix=makeContrasts(paste(as.character(group2),as.character(group1),sep="-"),levels=design)
+  fit.contrast<-contrasts.fit(fit, contrast.matrix)
+  fit.ebayes<-eBayes(fit.contrast)
+  results.table<-topTable(fit.ebayes,number=dim(exprs(rma.data.core.s))[1],adjust.method="BH")
+  results.ids<-row.names(results.table)
+  results<-cbind(fData(rma.data.core.s[results.ids,]),results.table,exprs(rma.data.core.s)[results.ids,])
+  write.table(results, file=paste("results/tables/results_",group1,"_vs_",group2,".csv",sep=""), sep=",", row.names = F)
+  logFC<-results.table$logFC
+  log_adj.pvalue=-log(results.table$adj.P.Val,base = 10)
+  significant<-results.table$adj.P.Val<0.05
+  
+  n_sig_0.05<-dim(results[results.table$adj.P.Val<0.05,])[1]
+  n_sig_0.01<-dim(results[results.table$adj.P.val<0.01,])[1]
+  comp<-paste(group1,"_vs_",group2,sep="")
+  cat(paste0(n_comp," ",comp, " ",n_sig_0.05," ",n_sig_0.01,"\n"))
+  if (first_comp){
+    summary_sig[n_comp,]<-c(comp,n_sig_0.05,n_sig_0.01)
+    first_comp=FALSE
+  }else{
+    summary_sig<-rbind(summary_sig, c(comp, n_sig_0.05, n_sig_0.01))
+  }
+  #print(summary_sig)
+  
+  volcano<-as.data.frame(cbind(logFC,log_adj.pvalue))
+  g<-ggplot(volcano, aes(logFC,log_adj.pvalue,col=significant))+geom_point()+ggtitle(paste("Volcano_",group1,"_vs_",group2,sep=""))+ylab("significance level (-log(adj.pval))")
+  pdf(file=paste("results/graphs/Volcano_",group1,"_vs_",group2,".pdf",sep=""),width = 10, height=5)
+  print(g)
+  dev.off()
 }
 write.table(file="results/summary_comparisons.txt",summary_sig, row.names = F, sep="\t")
 

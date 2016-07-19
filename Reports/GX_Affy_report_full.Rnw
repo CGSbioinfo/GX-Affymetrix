@@ -63,7 +63,7 @@ This control uses BAC spykes, they hybridize to the pre-labeled bacterial spike 
 \begin{center}
 \begin{minipage}{\linewidth}
 \makebox[\linewidth][c]{\href{run:controls/control_spykes.pdf}{\includegraphics[scale=0.5]{controls/control_spykes.pdf}}}
-\captionof{figure}{Bacterial spykes controls}
+\captionof{figure}{Bacterial spikes controls}
 \end{minipage}
 \end{center}
 \vspace{10mm}
@@ -80,7 +80,7 @@ If the polyA spikes display the expected rank order (lys<phe<thr<dap) then the p
 \begin{center}
 \begin{minipage}{\linewidth}
 \makebox[\linewidth]{\href{run:controls/control_polyA.pdf}{\includegraphics[scale=0.5]{controls/control_polyA.pdf}}}
-\captionof{figure}{PolyA spykes controls}
+\captionof{figure}{PolyA spikes controls}
 \end{minipage}
 \end{center}
 \vspace{10mm}
@@ -109,7 +109,7 @@ These probesets are used to estimate the true positive rate for the pos\_vs\_neg
 \color{BurntOrange}
 \subsection{NUSE boxplot}
 \color{black}
-NUSE stands for Normalised Unscalled Standard Error, the fitting of individual probe error in the Probe Level Model (PLM). The PLM models the expression measures using a M-estimator robust regression, in other word it fits a model to the probe-intensity data. Here we use the standard error of this model to check the sample quality. The NUSE values are standardized at the probe level accros the arrays, median values for each probe-set are set to 1. The boxplot is usefull to check that all the distributions are centered near 1. An array with a boxplot centered around 1.1 or higher is flagged as bad quality. If one array show a higher spread of NUSE distribution, it's standard  error is higher than the rest and it is also a sign of bad quality.
+NUSE stands for Normalised Unscalled Standard Error, the fitting of individual probe error in the Probe Level Model (PLM). The PLM models the expression measures using a M-estimator robust regression, in other word it fits a model to the probe-intensity data. Here we use the standard error of this model to check the sample quality. The NUSE values are standardized at the probe level accros the arrays, median values for each probe-set are set to 1. The boxplot is usefull to check that all the distributions are centered near 1. An array with a boxplot centered around 1.1 or higher is flagged as bad quality. If one array show a higher spread of NUSE distribution, its standard  error is higher than the rest and it is also a sign of bad quality.
 \begin{center}
 \begin{minipage}{\linewidth}
   \makebox[\linewidth]{\href{run:controls/control_NUSE.pdf}{\includegraphics[scale=0.6]{controls/control_NUSE.pdf}}}
@@ -249,9 +249,9 @@ The density plot represents the distribution of the intensity by plotting  the i
 
 \pagebreak
 \color{BurntOrange}
-\subsection{MA plot}
+\subsection{MA plot after normalisation}
 \color{black}
-MA plot is used to show variations in intensity for a sample against a pseudo sample constructed using the intensity of all the samples. M (y axis) is the log ratio of intensity between the sample and the pseudo sample and A (x axis) is the mean average of intensity.  Ideally the data will be close to the y=0 line. It is expected that the data will display more noise (deviation from the y=0 line) at low intensity than a high intensity. Outlier samples for technical reasons can be spotted as they might show a large deviation from the central line, a large cloud of data spreading far from the  y=0 for the whole intensity range. Trend in the data can also be seen using this plot ("banana" shaped plot), usually indicative of technical variation between sample. This type of trend should be corrected by the normalisation.
+As explained for the raw data, the MA plot is used to show variations in intensity for a sample against a pseudo sample constructed using the intensity of all the samples. M (y axis) is the log ratio of intensity between the sample and the pseudo sample and A (x axis) is the mean average of intensity.  Ideally the data will be close to the y=0 line. After normalisation any major trend in the clould of data should be corrected as the aim of the normalisation is to remove technical variations. The cloud of point should be more compact and the data less spread out after the normalisation.
 <<GetMAPlotRMA, echo=FALSE,results="asis">>=
 current=getwd()
 reportPath="rma_plots/"
@@ -307,7 +307,7 @@ MDS clustering clusters the samples in two dimensions (or more) instead of one, 
 \color{BurntOrange}
 \subsection{Hierarchical clustering}
 \color{black}
- Hierarchical clustering should display that each sample clusters within their replicate group. This can be used to spot potential sample swaps. If all the groups are mixed together, it is an indication that they might be little changes between the  groups. Two graphs are displayed below, one simple tree the other is a coloured tree. The colour of the sample matches the group they belong to, while the colour on the tree show the different cluster. Ideally the colours between the two should match, showing that the samples of a given group cluster together.
+ Hierarchical clustering should display that each sample clusters within their replicate group. This can be used to spot potential sample swaps. If all the groups are mixed together, it is an indication that they might be little changes between the  groups. Two graphs are displayed below, one simple tree the other is a coloured tree. The colour of the sample matches the group they belong to, while the colour on the tree show the different clusters. Ideally the colours between the two should match, showing that the samples of a given group cluster together.
 Hierachical clustering graphs for individual groups are available in the \href{run:raw_data_plots/}{raw\_data\_plots folder} for the raw data and in the \href{run:rma_data_plots/}{rma\_data\_plots folder} for the normalised data.
 \begin{center}
 \begin{minipage}{\linewidth}
